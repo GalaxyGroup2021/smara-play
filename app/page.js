@@ -10,18 +10,20 @@ import {
   Sparkles,
   AlertCircle,
   Calendar,
+  Trophy,
 } from 'lucide-react';
 import SmaraLogo from '@/components/SmaraLogo';
 import MafiaSmaraGame from '@/components/MafiaSmaraGame';
 import TdsGame from '@/components/TdsGame';
+import FlappySmaraGame from '@/components/FlappySmaraGame';
 import HowToPlayModal from '@/components/HowToPlayModal';
 
 export default function SmaraPlayHub() {
   const [checking, setChecking] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
   const [activeDate, setActiveDate] = useState('');
-  const [activeGame, setActiveGame] = useState(null); // null | 'mafia' | 'tds'
-  const [pendingGame, setPendingGame] = useState(null); // untuk overlay How To Play
+  const [activeGame, setActiveGame] = useState(null); // null | 'mafia' | 'tds' | 'flappy'
+  const [pendingGame, setPendingGame] = useState(null);
 
   const [passwordInput, setPasswordInput] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
@@ -179,7 +181,7 @@ export default function SmaraPlayHub() {
               <div className="text-center space-y-1 py-2">
                 <h2 className="text-2xl font-extrabold text-white">Pilih Game Tongkrongan</h2>
                 <p className="text-xs sm:text-sm text-sky-200/80">
-                  Main bareng teman satu meja atau lanjut dari rumah sampai tengah malam!
+                  Main bareng teman satu meja atau kejar skor mingguan berhadiah menu gratis!
                 </p>
               </div>
 
@@ -229,12 +231,37 @@ export default function SmaraPlayHub() {
                     Mainkan Sekarang →
                   </div>
                 </button>
+
+                {/* KARTU GAME KE-3: FLAPPY SMARA */}
+                <button
+                  onClick={() => setPendingGame('flappy')}
+                  className="smara-glass sm:col-span-2 hover:border-sky-300/60 hover:-translate-y-1 active:scale-[0.99] p-6 rounded-3xl text-left flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 transition-all cursor-pointer group"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-sky-400/20 border border-sky-300/40 flex items-center justify-center shrink-0 group-hover:scale-110 transition">
+                      <Trophy className="w-6 h-6 text-sky-300" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-sky-300">
+                        Arcade Solo • Ranking Mingguan Berhadiah Menu!
+                      </span>
+                      <h3 className="text-xl font-extrabold text-white mt-0.5">FLAPPY SMARA</h3>
+                      <p className="text-xs text-sky-200/80 mt-1 leading-relaxed">
+                        Terbangkan Owner SMARA KOPI, kumpulkan gelas kopi <strong>+10 poin</strong>, buka aksesoris keren, dan rebut <strong>Juara 1 Mingguan</strong> untuk gratis 1 menu!
+                      </p>
+                    </div>
+                  </div>
+                  <div className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-sky-400/20 group-hover:bg-sky-400 group-hover:text-[#041226] border border-sky-300/35 text-center text-xs font-extrabold text-white transition shrink-0">
+                    Mainkan Sekarang →
+                  </div>
+                </button>
               </div>
             </div>
           )}
 
           {activeGame === 'mafia' && <MafiaSmaraGame onBack={() => setActiveGame(null)} />}
           {activeGame === 'tds' && <TdsGame onBack={() => setActiveGame(null)} />}
+          {activeGame === 'flappy' && <FlappySmaraGame onBack={() => setActiveGame(null)} />}
         </div>
       )}
     </div>

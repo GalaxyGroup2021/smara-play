@@ -10,19 +10,21 @@ import {
   Mic,
   Timer,
   Vote,
-  ShieldAlert,
   Dices,
   MessageCircleQuestion,
   Flame,
   Coffee,
   Shuffle,
   BookOpen,
+  Sparkles,
+  Trophy,
 } from 'lucide-react';
 
 export default function HowToPlayModal({ game, onClose, onConfirm }) {
   if (!game) return null;
 
   const isMafia = game === 'mafia';
+  const isFlappy = game === 'flappy';
 
   return (
     <div
@@ -40,6 +42,8 @@ export default function HowToPlayModal({ game, onClose, onConfirm }) {
               className={`w-10 h-10 rounded-2xl flex items-center justify-center border ${
                 isMafia
                   ? 'bg-rose-500/20 border-rose-300/40 text-rose-300'
+                  : isFlappy
+                  ? 'bg-sky-500/20 border-sky-300/40 text-sky-300'
                   : 'bg-amber-500/20 border-amber-300/40 text-amber-300'
               }`}
             >
@@ -50,7 +54,7 @@ export default function HowToPlayModal({ game, onClose, onConfirm }) {
                 How To Play
               </p>
               <h3 className="text-lg font-extrabold text-white leading-tight">
-                {isMafia ? 'MAFIA SMARA' : 'Truth, Dare, or Sip'}
+                {isMafia ? 'MAFIA SMARA' : isFlappy ? 'FLAPPY SMARA' : 'Truth, Dare, or Sip'}
               </h3>
             </div>
           </div>
@@ -121,6 +125,60 @@ export default function HowToPlayModal({ game, onClose, onConfirm }) {
                   <p className="text-xs font-bold text-white">4. Voting Penyusup (30 Detik)</p>
                   <p className="text-xs text-sky-200/80 leading-relaxed">
                     Pilih 1 orang paling mencurigakan dalam 30 detik. Jika tepat memilih <strong>Mafia</strong>, Warga menang! Tapi jika salah vote <strong>Warga</strong>, Mafia langsung menang!
+                  </p>
+                </div>
+              </div>
+            </>
+          ) : isFlappy ? (
+            <>
+              <div className="smara-glass-soft p-3.5 rounded-2xl flex items-start gap-3">
+                <div className="p-2 rounded-xl bg-sky-400/20 text-sky-300 shrink-0 mt-0.5">
+                  <Play className="w-4 h-4" />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-white">1. Tap Layar untuk Terbang</p>
+                  <p className="text-xs text-sky-200/80 leading-relaxed">
+                    Kendalikan karakter <strong>Owner SMARA KOPI</strong> yang menunggangi burung melewati celah rintangan (<strong>+1 poin</strong> tiap tiang).
+                  </p>
+                </div>
+              </div>
+
+              <div className="smara-glass-soft p-3.5 rounded-2xl flex items-start gap-3">
+                <div className="p-2 rounded-xl bg-amber-400/20 text-amber-300 shrink-0 mt-0.5">
+                  <Coffee className="w-4 h-4" />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-white">2. Kejar Gelas Kopi (+10 Poin)</p>
+                  <p className="text-xs text-sky-200/80 leading-relaxed">
+                    Sentuh ikon{' '}
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-200 font-semibold">
+                      <Coffee className="w-3 h-3" /> Gelas Kopi
+                    </span>{' '}
+                    di jalur rintangan untuk langsung dapat <strong>+10 poin tambahan</strong>!
+                  </p>
+                </div>
+              </div>
+
+              <div className="smara-glass-soft p-3.5 rounded-2xl flex items-start gap-3">
+                <div className="p-2 rounded-xl bg-indigo-400/20 text-indigo-300 shrink-0 mt-0.5">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-white">3. Buka Aksesoris Karakter</p>
+                  <p className="text-xs text-sky-200/80 leading-relaxed">
+                    Kumpulkan poin untuk membuka <strong>Kacamata Kece, Topi Barista, Mahkota Sultan,</strong> hingga <strong>Aura Api Biru</strong> dan bebas pilih sebelum terbang!
+                  </p>
+                </div>
+              </div>
+
+              <div className="smara-glass-soft p-3.5 rounded-2xl flex items-start gap-3 border-amber-300/30">
+                <div className="p-2 rounded-xl bg-amber-500/20 text-amber-300 shrink-0 mt-0.5">
+                  <Trophy className="w-4 h-4" />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-white">4. Ranking Mingguan (Gratis 1 Menu!)</p>
+                  <p className="text-xs text-sky-200/80 leading-relaxed">
+                    Simpan Nama &amp; Nomor WA setelah bermain. <strong>Juara 1 setiap minggu</strong> bebas pilih <strong>1 Menu Gratis</strong> di SMARA KOPI!
                   </p>
                 </div>
               </div>
