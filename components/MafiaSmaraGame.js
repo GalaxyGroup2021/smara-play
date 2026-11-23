@@ -130,11 +130,22 @@ export default function MafiaSmaraGame({ onBack }) {
   };
 
   const handleLeaveRoom = () => {
+    const leavingCode = roomCode;
+    const leavingId = playerId;
     sessionStorage.removeItem('mafia_room_code');
     sessionStorage.removeItem('mafia_player_id');
     setRoomCode('');
     setPlayerId('');
     setGameState(null);
+    // Beri tahu server supaya game tetap bisa selesai & Host dipindahkan jika perlu
+    if (leavingCode && leavingId) {
+      fetch('/api/mafia', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'LEAVE_ROOM', code: leavingCode, playerId: leavingId }),
+        keepalive: true,
+      }).catch(() => {});
+    }
   };
 
   const copyRoomCode = () => {
@@ -150,6 +161,9 @@ export default function MafiaSmaraGame({ onBack }) {
   const aliveCount = players.filter((p) => p.is_alive).length;
   const votedCount = players.filter((p) => p.is_alive && p.has_voted).length;
   const expectedMafiaCount = Math.max(1, Math.floor(players.length / 3));
+  const clueSeconds = room?.clue_seconds || 10;
+  const voteCandidates = room?.vote_candidates || [];
+  const isRevote = Boolean(room?.is_revote);
   const mafiaNames = players
     .filter((p) => p.role === 'MAFIA')
     .map((m) => m.name)
@@ -168,13 +182,13 @@ export default function MafiaSmaraGame({ onBack }) {
 
         <div className="smara-glass rounded-3xl p-6 text-center space-y-2">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-400/20 border border-rose-300/35 text-[11px] font-bold tracking-wider text-rose-200 uppercase">
-            <ShieldAlert className="w-3.5 h-3.5" /> Rasio 2 Warga : 1 Mafia • 5 Detik Clue
+            <ShieldAlert className="w-3.5 h-3.5" /> Rasio 2 Warga : 1 Mafia • 10 Detik Clue
           </span>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
             MAFIA <span className="text-sky-300">SMARA</span>
           </h2>
           <p className="text-xs sm:text-sm text-sky-200/80 max-w-md mx-auto">
-            Tiap peserta punya <strong>5 detik</strong> bergantian menyebut <strong>1 kata sifat/rasa</strong> untuk mendeskripsikan kata rahasianya. Salah vote warga = Mafia langsung menang!
+            Tiap peserta punya <strong>10 detik</strong> bergantian menjelaskan kata rahasianya. Tiap ronde 1 orang tersingkir lewat voting. Warga menang kalau semua Mafia ketahuan, Mafia menang kalau bisa bertahan sampai tersisa <strong>2 pemain</strong>!
           </p>
         </div>
 
@@ -290,7 +304,7 @@ export default function MafiaSmaraGame({ onBack }) {
               <p className="text-xl font-extrabold text-sky-300 mt-1">{me?.word || '...'}</p>
             </div>
             <p className="text-xs text-sky-200/80">
-              Siapkan <strong>1 kata sifat / rasa</strong> untuk mendeskripsikan katamu!
+              Siapkan <strong>1 petunjuk singkat</strong> untuk menjelaskan katamu (10 detik per orang)!
             </p>
           </div>
         </div>
@@ -301,13 +315,13 @@ export default function MafiaSmaraGame({ onBack }) {
         <div className="fixed inset-0 z-50 bg-[#041226]/80 backdrop-blur-md flex items-center justify-center p-4 smara-overlay">
           <div className="smara-glass rounded-3xl p-8 max-w-sm w-full text-center space-y-4 smara-animate border-amber-300/45">
             <span className="inline-block px-3.5 py-1 rounded-full bg-amber-400/20 border border-amber-300/40 text-xs font-extrabold uppercase tracking-wider text-amber-200">
-              Voting Ditutup
+              {isRevote ? 'Hasil Seri' : 'Voting Ditutup'}
             </span>
             <h3 className="text-xl font-extrabold text-white leading-snug">
               {room.transition_msg || `Ronde ${room.round_number} Dimulai!`}
             </h3>
             <p className="text-xs text-sky-200/80">
-              Lanjut ke giliran deskripsi dalam <strong>{room.time_left} detik</strong>...
+              {isRevote ? 'Voting ulang dimulai' : 'Lanjut ke giliran clue'} dalam <strong>{room.time_left} detik</strong>...
             </p>
           </div>
         </div>
@@ -420,7 +434,15 @@ export default function MafiaSmaraGame({ onBack }) {
             </div>
           </div>
 
-          {/* FASE 1: GILIRAN SEBUTKAN 1 KATA (5 DETIK / ORANG) */}
+          {/* Banner untuk pemain yang sudah tersingkir */}
+          {me && !me.is_alive && (
+            <div className="p-3.5 rounded-2xl bg-rose-500/15 border border-rose-300/35 text-rose-100 text-xs font-semibold text-center flex items-center justify-center gap-2">
+              <Skull className="w-4 h-4 text-rose-300 shrink-0" />
+              Kamu sudah tersingkir. Tonton sampai akhir dan jangan bocorin kata ya!
+            </div>
+          )}
+
+          {/* FASE 1: GILIRAN JELASKAN KATA (10 DETIK / ORANG) */}
           {room.status === 'CLUE_TURN' && room.current_speaker && (
             <div
               key={`speaker-${room.current_speaker.id}`}
@@ -439,8 +461,11 @@ export default function MafiaSmaraGame({ onBack }) {
                 <p className="text-xs text-sky-200/80">Sekarang giliran:</p>
                 <h3 className="text-3xl font-extrabold text-white mt-1">
                   {room.current_speaker.name}
+                  {room.current_speaker.has_left && (
+                    <span className="block text-sm text-rose-300 mt-1">(Sudah keluar room, tunggu giliran berikutnya)</span>
+                  )}
                   {room.current_speaker.id === playerId && (
-                    <span className="block text-sm text-emerald-300 mt-1">(Giliran Kamu! Sebutkan 1 Kata!)</span>
+                    <span className="block text-sm text-emerald-300 mt-1">(Giliran Kamu! Jelaskan kata rahasiamu!)</span>
                   )}
                 </h3>
               </div>
@@ -448,22 +473,23 @@ export default function MafiaSmaraGame({ onBack }) {
               <div className="w-full h-2.5 bg-white/10 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-sky-300 to-amber-300 transition-all duration-1000 ease-linear"
-                  style={{ width: `${Math.min(100, (room.time_left / 5) * 100)}%` }}
+                  style={{ width: `${Math.min(100, (room.time_left / clueSeconds) * 100)}%` }}
                 />
               </div>
 
               <p className="text-xs text-sky-200/85">
-                Ucapkan <strong>1 kata sifat atau rasa</strong> saja (contoh: <em>&ldquo;Manis&rdquo;</em>, <em>&ldquo;Dingin&rdquo;</em>, <em>&ldquo;Pahit&rdquo;</em>) untuk mendeskripsikan katamu!
+                Kasih <strong>1 petunjuk singkat</strong> tentang kata rahasiamu (contoh: <em>&ldquo;Manis&rdquo;</em>, <em>&ldquo;Biasanya pagi&rdquo;</em>, <em>&ldquo;Pakai es&rdquo;</em>). Jangan terlalu jelas, nanti Mafia ikut tahu!
               </p>
+              <p className="text-[11px] text-sky-200/60">Pemain aktif: {aliveCount} orang</p>
             </div>
           )}
 
-          {/* FASE 2: VOTING PENYUSUP (30 DETIK) */}
+          {/* FASE 2: VOTING PENYUSUP (30 DETIK) / VOTING ULANG (20 DETIK) */}
           {room.status === 'VOTING' && (
             <div className="smara-glass rounded-3xl p-5 space-y-4 border-rose-300/40 smara-animate">
               <div className="flex items-center justify-between gap-2">
                 <h3 className="font-bold text-white text-sm flex items-center gap-2">
-                  <Vote className="w-4 h-4 text-rose-300" /> Voting Penyusup ({votedCount}/{aliveCount})
+                  <Vote className="w-4 h-4 text-rose-300" /> {isRevote ? 'Voting Ulang' : 'Voting Penyusup'} ({votedCount}/{aliveCount})
                 </h3>
                 <span
                   className={`inline-flex items-center gap-1 px-3 py-1 rounded-full font-mono text-xs font-extrabold border transition-all duration-300 ${
@@ -476,14 +502,21 @@ export default function MafiaSmaraGame({ onBack }) {
                 </span>
               </div>
 
-              <p className="text-xs text-sky-200/80">
-                Pilih 1 orang yang paling mencurigakan! Jika 30 detik habis tanpa memilih, suaramu otomatis tidak dinilai.
-              </p>
+              {isRevote ? (
+                <p className="text-xs text-amber-100 bg-amber-400/15 border border-amber-300/35 px-3 py-2 rounded-xl">
+                  Hasil sebelumnya <strong>seri</strong>. Sekarang pilih salah satu kandidat yang ditandai. Kalau masih seri, sistem akan <strong>mengundi acak</strong> siapa yang tersingkir.
+                </p>
+              ) : (
+                <p className="text-xs text-sky-200/80">
+                  Pilih 1 orang yang paling mencurigakan! Suara terbanyak akan tersingkir. Kalau seri, ada voting ulang khusus kandidat yang seri.
+                </p>
+              )}
 
               <div className="space-y-2.5">
                 {players.map((p) => {
                   const isMe = p.id === playerId;
                   const isMyVote = me?.voted_for === p.id;
+                  const isCandidate = !isRevote || voteCandidates.includes(p.id);
                   return (
                     <div
                       key={p.id}
@@ -492,6 +525,8 @@ export default function MafiaSmaraGame({ onBack }) {
                           ? 'bg-rose-950/30 border-rose-500/20 opacity-50'
                           : isMyVote
                           ? 'bg-sky-500/25 border-sky-300/60 scale-[1.01]'
+                          : isRevote && isCandidate
+                          ? 'bg-amber-400/10 border-amber-300/45'
                           : 'smara-glass-soft'
                       }`}
                     >
@@ -506,17 +541,20 @@ export default function MafiaSmaraGame({ onBack }) {
                             {p.name} {isMe && <span className="text-sky-300 text-xs">(Kamu)</span>}
                           </p>
                           <p className="text-[11px] text-sky-200/75">
-                            {!p.is_alive
-                              ? 'Tereliminasi'
+                            {p.has_left
+                              ? 'Keluar room'
+                              : !p.is_alive
+                              ? 'Tersingkir'
                               : p.has_voted
                               ? 'Sudah voting'
                               : 'Belum voting'}
+                            {isRevote && isCandidate && p.is_alive && ' • Kandidat'}
                             {p.votes_received > 0 && ` • ${p.votes_received} suara`}
                           </p>
                         </div>
                       </div>
 
-                      {p.is_alive && me?.is_alive && !isMe && (
+                      {p.is_alive && me?.is_alive && !isMe && isCandidate && (
                         <button
                           disabled={loading}
                           onClick={async () => {

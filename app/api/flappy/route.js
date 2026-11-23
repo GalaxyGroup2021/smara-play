@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { parseAccessories, serializeAccessories } from '@/lib/flappyCharacter';
 
 let flappyTableReady = false;
 
@@ -12,12 +13,20 @@ async function ensureFlappyTable() {
       player_name VARCHAR(40) NOT NULL,
       wa_number VARCHAR(25) NOT NULL,
       best_score INT NOT NULL DEFAULT 0,
-      accessory VARCHAR(32) DEFAULT 'none',
+      accessory VARCHAR(255) DEFAULT '',
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       UNIQUE KEY uniq_week_wa (week_key, wa_number),
       INDEX idx_week_score (week_key, best_score)
     )
   `);
+
+  // Perlebar kolom accessory pada tabel lama agar muat menyimpan banyak aksesoris sekaligus
+  try {
+    await pool.query(
+      "ALTER TABLE flappy_weekly_scores MODIFY COLUMN accessory VARCHAR(255) DEFAULT ''"
+    );
+  } catch {}
+
   flappyTableReady = true;
 }
 
@@ -42,20 +51,100 @@ function normalizeWaNumber(raw) {
   return digits;
 }
 
-export async function GET() {
-  try {
-    await ensureFlappyTable();
-    const weekKey = getCurrentWibWeekKey();
+async function fetchLeaderboardState(weekKey, waNormalized = '') {
+  const [rows] = await pool.query(
+    `SELECT id, player_name, wa_number, best_score, accessory
+     FROM flappy_weekly_scores
+     WHERE week_key = ?
+     ORDER BY best_score DESC, updated_at ASC, id ASC
+     LIMIT 10`,
+    [weekKey]
+  );
 
-    const [rows] = await pool.query(
-      'SELECT id, player_name, best_score, accessory FROM flappy_weekly_scores WHERE week_key = ? ORDER BY best_score DESC, updated_at ASC LIMIT 10',
-      [weekKey]
+  const [countRows] = await pool.query(
+    'SELECT COUNT(*) AS total FROM flappy_weekly_scores WHERE week_key = ?',
+    [weekKey]
+  );
+  const totalPlayers = Number(countRows[0]?.total || 0);
+
+  const leaderboard = rows.map((row) => ({
+    id: row.id,
+    player_name: row.player_name,
+    best_score: Number(row.best_score || 0),
+    accessory: serializeAccessories(row.accessory),
+    accessories: parseAccessories(row.accessory),
+    is_me: Boolean(waNormalized && row.wa_number === waNormalized),
+  }));
+
+  let me = null;
+  if (waNormalized && waNormalized.length >= 10) {
+    const [myRows] = await pool.query(
+      `SELECT id, player_name, best_score, accessory, updated_at
+       FROM flappy_weekly_scores
+       WHERE week_key = ? AND wa_number = ?
+       LIMIT 1`,
+      [weekKey, waNormalized]
     );
 
-    return NextResponse.json({
-      weekKey,
-      leaderboard: rows,
-    });
+    const [allTimeRows] = await pool.query(
+      'SELECT COALESCE(MAX(best_score), 0) AS all_time_best FROM flappy_weekly_scores WHERE wa_number = ?',
+      [waNormalized]
+    );
+    const allTimeBest = Number(allTimeRows[0]?.all_time_best || 0);
+
+    if (myRows.length > 0) {
+      const myRow = myRows[0];
+      const [rankRows] = await pool.query(
+        `SELECT COUNT(*) + 1 AS rank_pos
+         FROM flappy_weekly_scores
+         WHERE week_key = ?
+           AND (
+             best_score > ?
+             OR (best_score = ? AND updated_at < ?)
+             OR (best_score = ? AND updated_at = ? AND id < ?)
+           )`,
+        [
+          weekKey,
+          myRow.best_score,
+          myRow.best_score,
+          myRow.updated_at,
+          myRow.best_score,
+          myRow.updated_at,
+          myRow.id,
+        ]
+      );
+      me = {
+        id: myRow.id,
+        player_name: myRow.player_name,
+        best_score: Number(myRow.best_score || 0),
+        all_time_best: Math.max(allTimeBest, Number(myRow.best_score || 0)),
+        accessories: parseAccessories(myRow.accessory),
+        rank: Number(rankRows[0]?.rank_pos || 1),
+      };
+    } else if (allTimeBest > 0) {
+      me = {
+        id: null,
+        player_name: '',
+        best_score: 0,
+        all_time_best: allTimeBest,
+        accessories: [],
+        rank: null,
+      };
+    }
+  }
+
+  return { weekKey, leaderboard, totalPlayers, me };
+}
+
+export async function GET(request) {
+  try {
+    await ensureFlappyTable();
+    const { searchParams } = new URL(request.url);
+    const waNormalized = normalizeWaNumber(searchParams.get('wa') || '');
+    const weekKey = getCurrentWibWeekKey();
+
+    const state = await fetchLeaderboardState(weekKey, waNormalized);
+    return NextResponse.json(state);
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -66,42 +155,66 @@ export async function POST(request) {
     await ensureFlappyTable();
     const body = await request.json();
 
+    const action = String(body.action || 'SAVE_SCORE').toUpperCase();
     const name = String(body.name || '').trim().slice(0, 30);
     const waNormalized = normalizeWaNumber(body.wa);
-    const score = Math.max(0, Math.min(9999, Math.floor(Number(body.score || 0))));
-    const accessory = String(body.accessory || 'none').slice(0, 30);
+    const score = Math.max(0, Math.min(99999, Math.floor(Number(body.score || 0))));
+    const rawAcc = body.accessories !== undefined ? body.accessories : body.accessory;
+    const serializedAcc = serializeAccessories(rawAcc);
 
-    if (!name) {
-      return NextResponse.json({ error: 'Nama panggilan wajib diisi!' }, { status: 400 });
+    if (name.length < 2) {
+      return NextResponse.json({ error: 'Nama panggilan minimal 2 huruf!' }, { status: 400 });
     }
     if (waNormalized.length < 10 || waNormalized.length > 15) {
-      return NextResponse.json({ error: 'Nomor WhatsApp tidak valid! Contoh: 081234567890' }, { status: 400 });
-    }
-    if (score <= 0) {
-      return NextResponse.json({ error: 'Skor minimal 1 untuk masuk ranking mingguan!' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Nomor WhatsApp tidak valid! Contoh: 081234567890' },
+        { status: 400 }
+      );
     }
 
     const weekKey = getCurrentWibWeekKey();
 
-    // Nama di klasemen tetap stay pada entri awal minggu ini; skor diperbarui jika melampaui rekor lama
-    await pool.query(
-      `INSERT INTO flappy_weekly_scores (week_key, player_name, wa_number, best_score, accessory)
-       VALUES (?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE
-         accessory = IF(VALUES(best_score) > best_score, VALUES(accessory), accessory),
-         best_score = GREATEST(best_score, VALUES(best_score))`,
-      [weekKey, name, waNormalized, score, accessory]
-    );
+    if (action === 'UPDATE_ACCESSORIES') {
+      // Pastikan pemain sudah ada di tabel minggu ini, lalu perbarui aksesorisnya tanpa mengubah urutan skor
+      await pool.query(
+        `INSERT INTO flappy_weekly_scores (week_key, player_name, wa_number, best_score, accessory)
+         VALUES (?, ?, ?, 0, ?)
+         ON DUPLICATE KEY UPDATE
+           player_name = VALUES(player_name),
+           accessory = VALUES(accessory),
+           updated_at = updated_at`,
+        [weekKey, name, waNormalized, serializedAcc]
+      );
+    } else if (action === 'REGISTER') {
+      // Saat login mode Rank: langsung terdaftar di database & klasemen minggu ini (berapapun skor awalnya, termasuk 0)
+      await pool.query(
+        `INSERT INTO flappy_weekly_scores (week_key, player_name, wa_number, best_score, accessory)
+         VALUES (?, ?, ?, 0, ?)
+         ON DUPLICATE KEY UPDATE
+           player_name = VALUES(player_name),
+           accessory = IF(VALUES(accessory) != '', VALUES(accessory), accessory),
+           updated_at = updated_at`,
+        [weekKey, name, waNormalized, serializedAcc]
+      );
+    } else {
+      // SAVE_SCORE: berapapun skor akhirnya (termasuk 0), langsung masuk database & klasemen mingguan
+      await pool.query(
+        `INSERT INTO flappy_weekly_scores (week_key, player_name, wa_number, best_score, accessory)
+         VALUES (?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           player_name = VALUES(player_name),
+           accessory = VALUES(accessory),
+           updated_at = IF(VALUES(best_score) > best_score, CURRENT_TIMESTAMP, updated_at),
+           best_score = GREATEST(best_score, VALUES(best_score))`,
+        [weekKey, name, waNormalized, score, serializedAcc]
+      );
+    }
 
-    const [rows] = await pool.query(
-      'SELECT id, player_name, best_score, accessory FROM flappy_weekly_scores WHERE week_key = ? ORDER BY best_score DESC, updated_at ASC LIMIT 10',
-      [weekKey]
-    );
+    const state = await fetchLeaderboardState(weekKey, waNormalized);
 
     return NextResponse.json({
       success: true,
-      weekKey,
-      leaderboard: rows,
+      ...state,
     });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });

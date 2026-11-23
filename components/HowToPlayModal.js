@@ -106,13 +106,13 @@ export default function HowToPlayModal({ game, onClose, onConfirm }) {
                   <Mic className="w-4 h-4" />
                 </div>
                 <div className="space-y-0.5">
-                  <p className="text-xs font-bold text-white">3. Sebutkan 1 Kata Clue (5 Detik)</p>
+                  <p className="text-xs font-bold text-white">3. Jelaskan Kata Rahasia (10 Detik)</p>
                   <p className="text-xs text-sky-200/80 leading-relaxed">
                     Setiap peserta diberi waktu{' '}
                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-200 font-semibold">
-                      <Timer className="w-3 h-3" /> 5 detik
+                      <Timer className="w-3 h-3" /> 10 detik
                     </span>{' '}
-                    bergantian untuk menyebutkan <strong>1 kata sifat/rasa</strong> (contoh: <em>&ldquo;Manis&rdquo;</em> atau <em>&ldquo;Dingin&rdquo;</em>).
+                    bergantian untuk kasih <strong>1 petunjuk singkat</strong> (contoh: <em>&ldquo;Manis&rdquo;</em> atau <em>&ldquo;Pakai es&rdquo;</em>). Jangan terlalu jelas, nanti Mafia ikut paham!
                   </p>
                 </div>
               </div>
@@ -122,9 +122,12 @@ export default function HowToPlayModal({ game, onClose, onConfirm }) {
                   <Vote className="w-4 h-4" />
                 </div>
                 <div className="space-y-0.5">
-                  <p className="text-xs font-bold text-white">4. Voting Penyusup (30 Detik)</p>
+                  <p className="text-xs font-bold text-white">4. Voting & Eliminasi (30 Detik)</p>
                   <p className="text-xs text-sky-200/80 leading-relaxed">
-                    Pilih 1 orang paling mencurigakan dalam 30 detik. Jika tepat memilih <strong>Mafia</strong>, Warga menang! Tapi jika salah vote <strong>Warga</strong>, Mafia langsung menang!
+                    Pilih 1 orang paling mencurigakan. Suara terbanyak <strong>tersingkir</strong> dan perannya dibuka. Kalau seri, ada <strong>voting ulang</strong> khusus kandidat yang seri.
+                  </p>
+                  <p className="text-xs text-sky-200/80 leading-relaxed pt-1">
+                    <strong className="text-emerald-300">Warga menang</strong> kalau semua Mafia tersingkir. <strong className="text-rose-300">Mafia menang</strong> kalau bisa bertahan sampai tersisa <strong>2 pemain</strong>.
                   </p>
                 </div>
               </div>
@@ -136,9 +139,9 @@ export default function HowToPlayModal({ game, onClose, onConfirm }) {
                   <Play className="w-4 h-4" />
                 </div>
                 <div className="space-y-0.5">
-                  <p className="text-xs font-bold text-white">1. Tap Layar untuk Terbang</p>
+                  <p className="text-xs font-bold text-white">1. Tap Layar &amp; Bertahan (+1 Poin/Detik)</p>
                   <p className="text-xs text-sky-200/80 leading-relaxed">
-                    Kendalikan karakter <strong>Owner SMARA KOPI</strong> yang menunggangi burung melewati celah rintangan (<strong>+1 poin</strong> tiap tiang).
+                    Kendalikan <strong>Owner SMARA KOPI</strong> melewati celah tiang. Setiap detik bertahan dapat <strong>+1 poin</strong> dan kecepatan terus naik berkala!
                   </p>
                 </div>
               </div>
@@ -148,13 +151,13 @@ export default function HowToPlayModal({ game, onClose, onConfirm }) {
                   <Coffee className="w-4 h-4" />
                 </div>
                 <div className="space-y-0.5">
-                  <p className="text-xs font-bold text-white">2. Kejar Gelas Kopi (+10 Poin)</p>
+                  <p className="text-xs font-bold text-white">2. Sambar Gelas Kopi (+10 Poin)</p>
                   <p className="text-xs text-sky-200/80 leading-relaxed">
                     Sentuh ikon{' '}
                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-200 font-semibold">
                       <Coffee className="w-3 h-3" /> Gelas Kopi
                     </span>{' '}
-                    di jalur rintangan untuk langsung dapat <strong>+10 poin tambahan</strong>!
+                    di jalur aman untuk langsung dapat <strong>+10 poin tambahan</strong>!
                   </p>
                 </div>
               </div>
@@ -164,9 +167,9 @@ export default function HowToPlayModal({ game, onClose, onConfirm }) {
                   <Sparkles className="w-4 h-4" />
                 </div>
                 <div className="space-y-0.5">
-                  <p className="text-xs font-bold text-white">3. Buka Aksesoris Karakter</p>
+                  <p className="text-xs font-bold text-white">3. Achievement &amp; Aksesoris Bertumpuk</p>
                   <p className="text-xs text-sky-200/80 leading-relaxed">
-                    Kumpulkan poin untuk membuka <strong>Kacamata Kece, Topi Barista, Mahkota Sultan,</strong> hingga <strong>Aura Api Biru</strong> dan bebas pilih sebelum terbang!
+                    Capai target poin di Mode Rank untuk membuka aksesoris di tab <strong>Achievement</strong> (Syal, Kacamata, Celemek, Topi, Mahkota, Sayap Emas, Aura). Semuanya <strong>bisa ditumpuk / dipakai barengan</strong>!
                   </p>
                 </div>
               </div>
@@ -176,9 +179,9 @@ export default function HowToPlayModal({ game, onClose, onConfirm }) {
                   <Trophy className="w-4 h-4" />
                 </div>
                 <div className="space-y-0.5">
-                  <p className="text-xs font-bold text-white">4. Ranking Mingguan (Gratis 1 Menu!)</p>
+                  <p className="text-xs font-bold text-white">4. 10 Besar Mingguan &amp; Share Kartu</p>
                   <p className="text-xs text-sky-200/80 leading-relaxed">
-                    Simpan Nama &amp; Nomor WA setelah bermain. <strong>Juara 1 setiap minggu</strong> bebas pilih <strong>1 Menu Gratis</strong> di SMARA KOPI!
+                    Masuk <strong>Mode Rank</strong> (Nama &amp; WA) untuk langsung tercatat di klasemen mingguan. <strong>Juara #1 tiap minggu</strong> gratis <strong>1 Menu Pilihan</strong>, dan kamu bisa screenshot Kartu Skor untuk dibagikan!
                   </p>
                 </div>
               </div>
